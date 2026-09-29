@@ -50,17 +50,17 @@ jobs:
           PROFILE: ${{ inputs.profile }}
           VERSION: ${{ inputs.version }}
         run: bash producer/tools/build_rootfs.sh
-      - name: Check archive, licenses and Linux execution
-        env:
-          VERSION: ${{ inputs.version }}
-          PROFILE: ${{ inputs.profile }}
-        run: bash producer/tests/check_artifact.sh "producer/artifacts/rootfs-aarch64-${PROFILE}-${VERSION}.tar.zst"
       - uses: actions/upload-artifact@v4
         with:
           name: debian-${{ inputs.profile }}-aarch64
           path: producer/artifacts/
           if-no-files-found: error
           compression-level: 0
+      - name: Check archive, licenses and Linux execution
+        env:
+          VERSION: ${{ inputs.version }}
+          PROFILE: ${{ inputs.profile }}
+        run: bash producer/tests/check_artifact.sh "producer/artifacts/rootfs-aarch64-${PROFILE}-${VERSION}.tar.zst"
 
   release:
     if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'

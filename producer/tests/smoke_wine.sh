@@ -9,6 +9,8 @@ file /usr/lib/wine/wine64 | grep -q 'x86-64'
 test -s /usr/share/doc/box64/copyright
 test -s /usr/share/doc/box64/build-source.tar.gz
 test ! -e /usr/lib/box64-x86_64-linux-gnu
+test "$(readlink /usr/lib/wine/wineserver)" = /usr/local/bin/wineserver
+test -s /usr/lib/wine/wineserver.debian
 /usr/local/bin/box64 --version
 /usr/local/bin/wine --version
 /usr/local/bin/wineserver --version

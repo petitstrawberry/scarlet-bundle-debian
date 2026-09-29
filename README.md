@@ -93,6 +93,8 @@ Select `bundles/rootfs-wine` instead of `bundles/rootfs` in Scarlet's
 `full-debian` bundle. This is a complete rootfs, not an overlay on `base`.
 The profile keeps Debian's amd64 binaries at `/usr/lib/wine/` and supplies
 explicit Box64 launchers at `/usr/local/bin/wine` and `wineserver`.
+The internal `/usr/lib/wine/wineserver` selector is redirected to that launcher
+using `dpkg-divert`, preserving Debian's original as `wineserver.debian`.
 Box64 handles Wine's subsequent x86-64 exec calls; no kernel x86-64 loader
 or binfmt_misc registration is required.
 

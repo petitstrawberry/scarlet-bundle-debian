@@ -1,7 +1,7 @@
 #!/bin/sh
 # Explicit Box64 entry point; no kernel binfmt_misc registration is required.
 export WINELOADER=/usr/lib/wine/wine64
-export WINESERVER=/usr/lib/wine/wineserver64
+export WINESERVER=/usr/local/bin/wineserver
 export WINEARCH=win64
 export BOX64_LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu${BOX64_LD_LIBRARY_PATH:+:$BOX64_LD_LIBRARY_PATH}"
 exec /usr/local/bin/box64 /usr/lib/wine/wine64 "$@"

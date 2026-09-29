@@ -26,6 +26,12 @@ RUN dpkg --add-architecture amd64 && apt-get update && \
         libgl1:arm64 libwayland-client0:arm64
 COPY --from=box64-build /out/ /
 COPY --chmod=755 producer/wrappers/wine producer/wrappers/wineserver /usr/local/bin/
+# Wine tries the adjacent wineserver before WINESERVER/PATH. Debian's selector
+# is a native shell script, so its exec of wineserver64 would bypass Box64.
+# Preserve it with a dpkg diversion, including across later package upgrades.
+RUN dpkg-divert --local --rename --add \
+        --divert /usr/lib/wine/wineserver.debian /usr/lib/wine/wineserver && \
+    ln -s /usr/local/bin/wineserver /usr/lib/wine/wineserver
 COPY producer/tests/smoke_wine.sh /usr/share/scarlet/smoke_wine.sh
 
 FROM ${PROFILE}-packages AS packages

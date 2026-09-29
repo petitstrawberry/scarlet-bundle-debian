@@ -50,6 +50,11 @@ components such as khash and musl math routines; those components retain their
 own notices and terms. `producer/tools/build_box64.sh` records the upstream
 archive's SHA-256, selected source paths and build options.
 
+Debian's `/usr/lib/wine/wineserver` shell selector is preserved as
+`wineserver.debian` using `dpkg-divert`. Its original path links to our Box64
+launcher, so Wine's internal server startup also goes through the emulator.
+The Wine ELF/PE binaries remain unmodified.
+
 Upstream's prebuilt `x64lib`, `x86lib`, Android libraries and executable tests
 are excluded from both exported archives. `NO_LIB_INSTALL` is enabled, and only
 the newly compiled Box64 executable is installed. All additional runtime
