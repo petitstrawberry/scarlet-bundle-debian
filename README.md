@@ -3,31 +3,35 @@
 Debian GNU/Linux userspace producer for
 [Scarlet](https://github.com/petitstrawberry/Scarlet), using the same repository
 layout and archive-layer format as `scarlet-bundle-alpine`.
-The first target is a minimal AArch64 glibc rootfs based on Debian 13 (trixie).
-It includes bash, coreutils, apt/dpkg, CA certificates, curl, and the GCC/C++
-runtimes as a starting point for glibc applications such as Box64.
+Both profiles use an AArch64 glibc rootfs based on Debian 13 (trixie):
+
+- `base`: bash, coreutils, apt/dpkg, CA certificates, curl and GCC/C++ runtimes;
+- `wine`: the base plus Box64 v0.4.4, Debian's amd64 Wine64 and dependencies.
+  This initial profile supports 64-bit Windows programs; Wine32, Box86 and
+  a WoW64 build are not included.
 
 ## CI builds
 
 Pushes validate the scripts. Run the **Build Debian rootfs** workflow manually
-with `version=v0.1.0` to build on GitHub's native `ubuntu-24.04-arm` runner:
+with a new version to build on GitHub's native `ubuntu-24.04-arm` runner:
 
 ```sh
-gh workflow run build.yml -f version=v0.1.0
+gh workflow run build.yml -f version=v0.2.0 -f profile=wine
 ```
 
 CI builds the rootfs, obtains matching source packages, checks every package's
 copyright notice, verifies source checksums, and executes the exported rootfs
 in a Linux container. By default, a successful manual run on `main` publishes
 an experimental GitHub prerelease with binaries and corresponding sources,
-then provides the hash-pinned bundle at `bundles/rootfs/bundle.toml` via an
-automated commit. The version must be new; existing releases are never replaced.
+then provides the hash-pinned bundle at `bundles/rootfs/bundle.toml` (`base`)
+or `bundles/rootfs-wine/bundle.toml` (`wine`) via an automated commit.
+The version must be new across both profiles; existing releases are never replaced.
 Set `publish=false` for a build-only run and download the
-`debian-base-aarch64` workflow artifact. No local build is needed.
+`debian-<profile>-aarch64` workflow artifact. No local build is needed.
 
 For a separate Linux/Docker build environment, the equivalent producer entry
 point is `ARCH=aarch64 PROFILE=base VERSION=v0.1.0 bash producer/tools/build_rootfs.sh`.
-Only the base profile and AArch64 are currently supported.
+Set `PROFILE=wine` for Box64/Wine. Only AArch64 is currently supported.
 
 ## Artifacts and release
 
@@ -39,6 +43,12 @@ Only the base profile and AArch64 are currently supported.
 - `dpkg-packages.tsv` and `source-packages.tsv`: exact version inventories;
 - `SHA256SUMS`: hashes for both archives and both inventories;
 - `bundle.toml`: candidate hash-pinned release manifest.
+
+The `wine` profile uses `wine` in place of `base` in archive names. Box64 is
+built from a commit and SHA-256 pinned source archive with generic ARM64 dynarec
+enabled. Its bundled prebuilt libraries are excluded; Debian supplies the
+native ARM64 and emulated AMD64 dependencies. Wine itself is an unmodified
+Debian package. The build does not install a binfmt_misc handler.
 
 The base container image is digest-pinned in `producer/tools/Dockerfile`.
 Packages are updated from signed Debian repositories at build time; this is
@@ -74,15 +84,43 @@ abi-run linux-aarch64 /usr/bin/apt-get --version
 ```
 
 Linux-container smoke success does not establish Scarlet compatibility.
-In particular, apt package installation, maintainer scripts, Box64, Wine,
-GUI/audio/GPU integration and systemd boot are not validated here.
-This first bundle has no Mozc or browser overlay.
+In particular, apt installation/maintainer scripts and systemd boot are not
+validated on Scarlet. Neither profile includes a Mozc or browser overlay.
+
+### Box64 and Wine bring-up
+
+Select `bundles/rootfs-wine` instead of `bundles/rootfs` in Scarlet's
+`full-debian` bundle. This is a complete rootfs, not an overlay on `base`.
+The profile keeps Debian's amd64 binaries at `/usr/lib/wine/` and supplies
+explicit Box64 launchers at `/usr/local/bin/wine` and `wineserver`.
+Box64 handles Wine's subsequent x86-64 exec calls; no kernel x86-64 loader
+or binfmt_misc registration is required.
+
+Run the probes in order on Scarlet:
+
+```sh
+abi-run linux-aarch64 /usr/local/bin/box64 --version
+abi-run linux-aarch64 /usr/local/bin/wine --version
+abi-run linux-aarch64 /usr/local/bin/wineserver --version
+abi-run linux-aarch64 /usr/bin/env WINEDLLOVERRIDES=mscoree,mshtml= /usr/local/bin/wine cmd /c ver
+```
+
+The last command initializes `~/.wine` on first use and exercises Windows
+loading, Wine's server, processes, threads and IPC. Mono/Gecko downloads are
+disabled for this probe. An ordinary PE64 executable can then be invoked with
+`abi-run linux-aarch64 /usr/local/bin/wine /shared/hello.exe`.
+For interpreter-only diagnosis, put `/usr/bin/env BOX64_DYNAREC=0` before
+`/usr/local/bin/wine`; the default uses dynarec.
+
+CI checks the version probes and `wine cmd /c echo SCARLET_WINE64_OK` on the
+exported rootfs with networking disabled and a temporary Wine prefix.
+GUI/audio/GPU integration and Wine's runtime on Scarlet remain unverified.
 
 ## Repository layout
 
 - `producer/tools/`: Docker build, source collection and rootfs packaging;
 - `producer/tests/`: artifact and Linux execution checks;
 - `producer/artifacts/`, `producer/cache/`: ignored build outputs;
-- `bundles/rootfs/`: Scarlet's release-pinned archive layer;
+- `bundles/rootfs/`, `bundles/rootfs-wine/`: release-pinned archive layers;
 - `.github/workflows/build.yml`: validation, manually triggered CI build and
   automatic release publication.

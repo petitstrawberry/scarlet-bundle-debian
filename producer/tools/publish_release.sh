@@ -4,13 +4,19 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 VERSION="${VERSION:?VERSION is required}"
+export PROFILE="${PROFILE:-base}"
+case "$PROFILE" in
+    base) bundle_dir=bundles/rootfs ;;
+    wine) bundle_dir=bundles/rootfs-wine ;;
+    *) echo "Unsupported PROFILE=$PROFILE" >&2; exit 2 ;;
+esac
 BUILD_REVISION="${BUILD_REVISION:?BUILD_REVISION is required}"
 if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo 'VERSION must look like v0.1.0' >&2; exit 2
 fi
 test "$(git rev-parse HEAD)" = "$BUILD_REVISION"
-rootfs="rootfs-aarch64-base-${VERSION}.tar.zst"
-sources="sources-aarch64-base-${VERSION}.tar.zst"
+rootfs="rootfs-aarch64-${PROFILE}-${VERSION}.tar.zst"
+sources="sources-aarch64-${PROFILE}-${VERSION}.tar.zst"
 for filename in "$rootfs" "$sources" dpkg-packages.tsv source-packages.tsv SHA256SUMS bundle.toml; do
     test -s "producer/artifacts/$filename"
 done
@@ -23,7 +29,8 @@ import tomllib
 
 directory = Path('producer/artifacts')
 version = os.environ['VERSION']
-name = f'rootfs-aarch64-base-{version}.tar.zst'
+profile = os.environ['PROFILE']
+name = f'rootfs-aarch64-{profile}-{version}.tar.zst'
 with (directory / 'bundle.toml').open('rb') as file:
     manifest = tomllib.load(file)
 with (directory / name).open('rb') as file:
@@ -44,7 +51,7 @@ if gh release view "$VERSION" >/dev/null 2>&1; then
 fi
 # A draft keeps binaries private until the matching sources are fully uploaded.
 gh release create "$VERSION" --draft --prerelease --target "$BUILD_REVISION" \
-    --title "Debian trixie AArch64 ${VERSION}" --notes-file producer/release-notes.md \
+    --title "Debian trixie AArch64 ${VERSION} (${PROFILE})" --notes-file "producer/release-notes-${PROFILE}.md" \
     "producer/artifacts/$rootfs" "producer/artifacts/$sources" \
     producer/artifacts/dpkg-packages.tsv producer/artifacts/source-packages.tsv \
     producer/artifacts/SHA256SUMS producer/artifacts/bundle.toml
@@ -59,10 +66,11 @@ expected = {path.name: path.stat().st_size for path in directory.iterdir()
             if path.name != 'release-assets.json'}
 assert {item['name']: item['size'] for item in assets} == expected, 'Incomplete release upload'
 PY
-cp producer/artifacts/bundle.toml bundles/rootfs/bundle.toml
+mkdir -p "$bundle_dir"
+cp producer/artifacts/bundle.toml "$bundle_dir/bundle.toml"
 git config user.name 'github-actions[bot]'
 git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-git add bundles/rootfs/bundle.toml
-git commit -m "Pin Debian rootfs ${VERSION}"
+git add "$bundle_dir/bundle.toml"
+git commit -m "Pin Debian ${PROFILE} rootfs ${VERSION}"
 git push origin HEAD:main
 gh release edit "$VERSION" --draft=false

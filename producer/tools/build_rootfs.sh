@@ -8,7 +8,7 @@ VERSION="${VERSION:-v0.1.0}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-${REPO_ROOT}/producer/artifacts}"
 CACHE_DIR="${CACHE_DIR:-${REPO_ROOT}/producer/cache}"
 case "$ARCH" in aarch64) docker_platform=linux/arm64 ;; *) echo "Unsupported ARCH=$ARCH" >&2; exit 2 ;; esac
-case "$PROFILE" in base) ;; *) echo "Unsupported PROFILE=$PROFILE; choose base" >&2; exit 2 ;; esac
+case "$PROFILE" in base|wine) ;; *) echo "Unsupported PROFILE=$PROFILE; choose base or wine" >&2; exit 2 ;; esac
 if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo 'VERSION must look like v0.1.0' >&2; exit 2
 fi
@@ -32,9 +32,9 @@ revision="$(git -C "$REPO_ROOT" rev-parse HEAD)"
 
 # Both targets reuse the same binary-installation layer and APT indexes.
 # Sources are mandatory, including for non-release CI builds.
-docker build --platform "$docker_platform" --target sources \
+docker build --platform "$docker_platform" --target sources --build-arg PROFILE="$PROFILE" \
     --iidfile "$stage/sources.id" -f "$REPO_ROOT/producer/tools/Dockerfile" "$REPO_ROOT"
-docker build --platform "$docker_platform" --target rootfs \
+docker build --platform "$docker_platform" --target rootfs --build-arg PROFILE="$PROFILE" \
     --build-arg VERSION="$VERSION" --build-arg REVISION="$revision" \
     --iidfile "$stage/rootfs.id" -f "$REPO_ROOT/producer/tools/Dockerfile" "$REPO_ROOT"
 source_image="$(cat "$stage/sources.id")"

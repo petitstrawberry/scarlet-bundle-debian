@@ -28,4 +28,8 @@ done
 image="$(zstd -dc "$archive" | docker import --platform linux/arm64 -)"
 docker run --rm --network none --platform linux/arm64 "$image" \
     /bin/bash /usr/share/scarlet/smoke_rootfs.sh
+if grep -Fxq ./usr/share/scarlet/smoke_wine.sh "$listing"; then
+    docker run --rm --network none --platform linux/arm64 "$image" \
+        /bin/bash /usr/share/scarlet/smoke_wine.sh
+fi
 echo "Artifact OK: $archive_name"
