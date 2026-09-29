@@ -1,0 +1,50 @@
+name: Build Debian rootfs
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Artifact version
+        required: true
+        default: v0.1.0
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          for script in producer/tools/*.sh producer/tests/*.sh; do
+            bash -n "$script"
+          done
+
+  build:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install archive tools
+        run: sudo apt-get update && sudo apt-get install -y zstd
+      - name: Build rootfs and corresponding sources
+        env:
+          ARCH: aarch64
+          PROFILE: base
+          VERSION: ${{ inputs.version }}
+        run: bash producer/tools/build_rootfs.sh
+      - name: Check archive, licenses and Linux execution
+        env:
+          VERSION: ${{ inputs.version }}
+        run: bash producer/tests/check_artifact.sh "producer/artifacts/rootfs-aarch64-base-${VERSION}.tar.zst"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debian-base-aarch64
+          path: producer/artifacts/
+          if-no-files-found: error
+          compression-level: 0

@@ -1,0 +1,4 @@
+/producer/cache/
+/producer/artifacts/
+__pycache__/
+.DS_Store
