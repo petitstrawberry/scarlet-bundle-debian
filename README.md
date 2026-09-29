@@ -46,7 +46,8 @@ Set `PROFILE=wine` for Box64/Wine. Only AArch64 is currently supported.
 
 The `wine` profile uses `wine` in place of `base` in archive names. Box64 is
 built from a commit and SHA-256 pinned source archive with generic ARM64 dynarec
-and the memory-saving jump table enabled. Its bundled prebuilt libraries are excluded; Debian supplies the
+and the memory-saving jump table enabled. Its bundled prebuilt libraries are
+excluded; Debian supplies the
 native ARM64 and emulated AMD64 dependencies. Wine itself is an unmodified
 Debian package. The build does not install a binfmt_misc handler.
 
@@ -100,25 +101,30 @@ or binfmt_misc registration is required.
 The launcher keeps OpenSSL 3 in amd64 emulation because Debian's FFmpeg uses
 BIO callback getters absent from Box64 v0.4.4's native OpenSSL wrapper.
 
-Run the probes in order on Scarlet:
+Run the probes in order on Scarlet. `abi-run` directly opens an ELF image,
+so invoke the Wine shell launchers through `/bin/sh`:
 
 ```sh
 abi-run linux-aarch64 /usr/local/bin/box64 --version
-abi-run linux-aarch64 /usr/local/bin/wine --version
-abi-run linux-aarch64 /usr/local/bin/wineserver --version
-abi-run linux-aarch64 /usr/bin/env WINEDLLOVERRIDES=mscoree,mshtml= /usr/local/bin/wine cmd /c ver
+abi-run linux-aarch64 /bin/sh /usr/local/bin/wine --version
+abi-run linux-aarch64 /bin/sh /usr/local/bin/wineserver --version
+abi-run linux-aarch64 /usr/bin/env WINEDLLOVERRIDES=mscoree,mshtml= /bin/sh /usr/local/bin/wine cmd /c ver
 ```
 
 The last command initializes `~/.wine` on first use and exercises Windows
 loading, Wine's server, processes, threads and IPC. Mono/Gecko downloads are
 disabled for this probe. An ordinary PE64 executable can then be invoked with
-`abi-run linux-aarch64 /usr/local/bin/wine /shared/hello.exe`.
+`abi-run linux-aarch64 /bin/sh /usr/local/bin/wine /shared/hello.exe`.
 For interpreter-only diagnosis, put `/usr/bin/env BOX64_DYNAREC=0` before
-`/usr/local/bin/wine`; the default uses dynarec.
+`/bin/sh /usr/local/bin/wine`; the default uses dynarec.
 
 CI checks the version probes and `wine cmd /c echo SCARLET_WINE64_OK` on the
 exported rootfs with networking disabled and a temporary Wine prefix.
 GUI/audio/GPU integration and Wine's runtime on Scarlet remain unverified.
+The v0.2.0 Linux console smoke passes, but multimedia initialization still
+reports unresolved OpenCL, OpenMP and Zstd wrapper symbols. This release is a
+console bring-up baseline; media playback and full native-library coverage
+remain open work.
 
 ## Repository layout
 
