@@ -1,0 +1,9 @@
+# Experimental AArch64 Debian Linux view for Scarlet.
+
+[[layers]]
+kind = "archive"
+url = "https://github.com/petitstrawberry/scarlet-bundle-debian/releases/download/v0.2.0/rootfs-aarch64-wine-v0.2.0.tar.zst"
+sha256 = "sha256:86db9824ab395d20f47b6630cf8a9b3bad55de3eac19460d712b112dc565127e"
+format = "tar-zst"
+strip_components = 1
+to = "/systems/linux-aarch64"
