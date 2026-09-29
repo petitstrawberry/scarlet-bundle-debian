@@ -42,7 +42,7 @@ printf 'Box64 v0.4.4\nCommit: %s\nURL: %s\nUpstream SHA256: %s\nSources: build-s
 cmake -S /build/box64 -B /build/box64-build \
     -DARM_DYNAREC=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DNOGIT=ON -DNO_LIB_INSTALL=ON -DNO_CONF_INSTALL=ON -DBOX32=OFF
-cmake --build /build/box64-build --target box64 --parallel 2
+cmake --build /build/box64-build --target box64 --parallel "$(nproc)"
 install -m755 /build/box64-build/box64 /out/usr/local/bin/box64
 cp /build/box64-build/CMakeCache.txt /out/usr/share/doc/box64/
 dpkg-query -W > /out/usr/share/doc/box64/build-packages.tsv

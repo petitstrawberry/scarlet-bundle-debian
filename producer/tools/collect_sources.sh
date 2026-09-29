@@ -23,8 +23,14 @@ while IFS=$'\t' read -r source version; do
         descriptors=(*.dsc)
         test "${#descriptors[@]}" -eq 1
         descriptor="${descriptors[0]}"
-        test "$(sed -n 's/^Source: //p' "$descriptor")" = "$source"
-        test "$(sed -n 's/^Version: //p' "$descriptor")" = "$version"
+        # A clearsigned .dsc may also have a "Version: GnuPG ..." header in
+        # its signature block. Read the first control field, not every match.
+        actual_source="$(awk '/^Source: / {print $2; exit}' "$descriptor")"
+        actual_version="$(awk '/^Version: / {print $2; exit}' "$descriptor")"
+        if [[ "$actual_source" != "$source" || "$actual_version" != "$version" ]]; then
+            echo "Source mismatch: wanted $source=$version, got $actual_source=$actual_version" >&2
+            exit 1
+        fi
         awk '/^Checksums-Sha256:/ {checksums=1; next} checksums && /^ / {print $1 "  " $3; next} checksums {exit}' \
             "$descriptor" > SHA256SUMS
         test -s SHA256SUMS
