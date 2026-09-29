@@ -9,6 +9,10 @@ on:
         description: Artifact version
         required: true
         default: v0.1.0
+      publish:
+        description: Publish a release and update the pinned bundle after validation
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -48,3 +52,26 @@ jobs:
           path: producer/artifacts/
           if-no-files-found: error
           compression-level: 0
+
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    concurrency:
+      group: debian-release
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: debian-base-aarch64
+          path: producer/artifacts
+      - name: Publish binary and source archives together, and pin the bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          BUILD_REVISION: ${{ github.sha }}
+        run: bash producer/tools/publish_release.sh

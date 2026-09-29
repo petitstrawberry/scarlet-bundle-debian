@@ -18,8 +18,12 @@ gh workflow run build.yml -f version=v0.1.0
 
 CI builds the rootfs, obtains matching source packages, checks every package's
 copyright notice, verifies source checksums, and executes the exported rootfs
-in a Linux container. Download the `debian-base-aarch64` workflow artifact.
-No local build is needed for this workflow.
+in a Linux container. By default, a successful manual run on `main` publishes
+an experimental GitHub prerelease with binaries and corresponding sources,
+then provides the hash-pinned bundle at `bundles/rootfs/bundle.toml` via an
+automated commit. The version must be new; existing releases are never replaced.
+Set `publish=false` for a build-only run and download the
+`debian-base-aarch64` workflow artifact. No local build is needed.
 
 For a separate Linux/Docker build environment, the equivalent producer entry
 point is `ARCH=aarch64 PROFILE=base VERSION=v0.1.0 bash producer/tools/build_rootfs.sh`.
@@ -41,10 +45,11 @@ Packages are updated from signed Debian repositories at build time; this is
 not a bit-for-bit reproducible snapshot build. Published release bytes are
 pinned by SHA-256 and accompanied by their exact corresponding sources.
 
-Publish a tested binary archive and its matching source archive together on
-the same versioned GitHub Release, along with the inventories and checksums.
-Then copy the generated manifest to `bundles/rootfs/bundle.toml`. Do not
-replace the bytes behind an already-pinned release.
+The release job first uploads all assets to a draft and checks upload sizes.
+It commits the verified manifest and only then makes the release public,
+ensuring binaries and corresponding sources become available together.
+If publication fails after draft creation, the draft is left for inspection;
+there is no automatic overwrite or retry of an existing version.
 See [ATTRIBUTION.md](ATTRIBUTION.md) for third-party licenses and source layout.
 
 ## Scarlet bring-up
@@ -79,4 +84,5 @@ This first bundle has no Mozc or browser overlay.
 - `producer/tests/`: artifact and Linux execution checks;
 - `producer/artifacts/`, `producer/cache/`: ignored build outputs;
 - `bundles/rootfs/`: Scarlet's release-pinned archive layer;
-- `.github/workflows/build.yml`: validation and manually triggered CI build.
+- `.github/workflows/build.yml`: validation, manually triggered CI build and
+  automatic release publication.

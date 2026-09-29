@@ -1,6 +1,6 @@
 # Debian rootfs bundle
 
-After a tested release is published, its generated `bundle.toml` is committed
-here with the release URL and actual rootfs SHA-256. CI generates the candidate
-manifest alongside the rootfs and corresponding-source archives; it is not a
-usable remote bundle until those release assets are published.
+The release job commits the generated `bundle.toml` here with the release URL
+and actual rootfs SHA-256, after uploading both the binary and corresponding
+source archives to a draft. It then publishes the release. Build-only runs
+generate a candidate manifest in the workflow artifact instead.

@@ -18,6 +18,8 @@ FROM packages AS sources
 COPY producer/tools/collect_sources.sh /tmp/collect_sources.sh
 RUN bash /tmp/collect_sources.sh
 COPY producer /sources/producer
+COPY .github /sources/.github
+COPY .dockerignore /sources/.dockerignore
 COPY LICENSE ATTRIBUTION.md README.md /sources/
 
 FROM packages AS rootfs
