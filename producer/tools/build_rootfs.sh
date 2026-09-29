@@ -30,15 +30,21 @@ cleanup() {
 trap cleanup EXIT
 revision="$(git -C "$REPO_ROOT" rev-parse HEAD)"
 
+# Fail early on Wine startup before collecting and compressing sources. The
+# exported archive is checked separately, including ownership/symlink effects.
+docker build --platform "$docker_platform" --target rootfs --build-arg PROFILE="$PROFILE" \
+    --build-arg VERSION="$VERSION" --build-arg REVISION="$revision" \
+    --iidfile "$stage/rootfs.id" -f "$REPO_ROOT/producer/tools/Dockerfile" "$REPO_ROOT"
+rootfs_image="$(cat "$stage/rootfs.id")"
+if [[ "$PROFILE" == wine ]]; then
+    docker run --rm --network none --platform "$docker_platform" "$rootfs_image" \
+        /bin/bash /usr/share/scarlet/smoke_wine.sh
+fi
 # Both targets reuse the same binary-installation layer and APT indexes.
 # Sources are mandatory, including for non-release CI builds.
 docker build --platform "$docker_platform" --target sources --build-arg PROFILE="$PROFILE" \
     --iidfile "$stage/sources.id" -f "$REPO_ROOT/producer/tools/Dockerfile" "$REPO_ROOT"
-docker build --platform "$docker_platform" --target rootfs --build-arg PROFILE="$PROFILE" \
-    --build-arg VERSION="$VERSION" --build-arg REVISION="$revision" \
-    --iidfile "$stage/rootfs.id" -f "$REPO_ROOT/producer/tools/Dockerfile" "$REPO_ROOT"
 source_image="$(cat "$stage/sources.id")"
-rootfs_image="$(cat "$stage/rootfs.id")"
 
 docker run --rm --network none --platform "$docker_platform" \
     --mount "type=bind,src=${ARTIFACT_DIR},dst=/artifacts" \

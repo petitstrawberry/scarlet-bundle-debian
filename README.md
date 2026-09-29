@@ -46,7 +46,7 @@ Set `PROFILE=wine` for Box64/Wine. Only AArch64 is currently supported.
 
 The `wine` profile uses `wine` in place of `base` in archive names. Box64 is
 built from a commit and SHA-256 pinned source archive with generic ARM64 dynarec
-enabled. Its bundled prebuilt libraries are excluded; Debian supplies the
+and the memory-saving jump table enabled. Its bundled prebuilt libraries are excluded; Debian supplies the
 native ARM64 and emulated AMD64 dependencies. Wine itself is an unmodified
 Debian package. The build does not install a binfmt_misc handler.
 
@@ -97,6 +97,8 @@ The internal `/usr/lib/wine/wineserver` selector is redirected to that launcher
 using `dpkg-divert`, preserving Debian's original as `wineserver.debian`.
 Box64 handles Wine's subsequent x86-64 exec calls; no kernel x86-64 loader
 or binfmt_misc registration is required.
+The launcher keeps OpenSSL 3 in amd64 emulation because Debian's FFmpeg uses
+BIO callback getters absent from Box64 v0.4.4's native OpenSSL wrapper.
 
 Run the probes in order on Scarlet:
 

@@ -23,7 +23,15 @@ RUN dpkg --add-architecture amd64 && apt-get update && \
         libx11-6:arm64 libxext6:arm64 libxrender1:arm64 libxrandr2:arm64 \
         libxi6:arm64 libxcursor1:arm64 libxfixes3:arm64 libxkbcommon0:arm64 \
         libasound2t64:arm64 libpulse0:arm64 libudev1:arm64 libvulkan1:arm64 \
-        libgl1:arm64 libwayland-client0:arm64
+        libgl1:arm64 libwayland-client0:arm64 libwayland-egl1:arm64 \
+        libxkbregistry0:arm64 libgstreamer1.0-0:arm64 \
+        libgstreamer-plugins-base1.0-0:arm64 libsdl2-2.0-0:arm64 \
+        libusb-1.0-0:arm64 libcups2t64:arm64 libcairo2:arm64 \
+        libcairo-gobject2:arm64 libgdk-pixbuf-2.0-0:arm64 \
+        libpango-1.0-0:arm64 libpangocairo-1.0-0:arm64 libpangoft2-1.0-0:arm64 \
+        libharfbuzz0b:arm64 liblcms2-2:arm64 libgomp1:arm64 libnuma1:arm64 \
+        libssh-4:arm64 libva-drm2:arm64 libva-x11-2:arm64 libvdpau1:arm64 \
+        libvpx9:arm64 libvorbisfile3:arm64 ocl-icd-libopencl1:arm64
 COPY --from=box64-build /out/ /
 COPY --chmod=755 producer/wrappers/wine producer/wrappers/wineserver /usr/local/bin/
 # Wine tries the adjacent wineserver before WINESERVER/PATH. Debian's selector
