@@ -46,5 +46,13 @@ if grep -Fxq ./usr/share/scarlet/smoke_graphics.sh "$listing"; then
         ./upstream/linux-graphics/cargo-vendor-sws-config.toml; do
         grep -Fxq "$path" "$listing"
     done
+    docker run --rm --network none --platform linux/arm64 \
+        --mount "type=bind,src=$archive_dir,dst=/artifacts,readonly" \
+        -e GRAPHICS_SOURCE_ARCHIVE="$(basename "$source_archive")" "$image" sh -eu -c '
+            mkdir /tmp/graphics-source-check
+            tar --zstd -xf "/artifacts/$GRAPHICS_SOURCE_ARCHIVE" -C /tmp/graphics-source-check
+            cd /tmp/graphics-source-check/upstream/linux-graphics
+            sha256sum --check --quiet ../linux-graphics-source-files.sha256
+        '
 fi
 echo "Artifact OK: $archive_name"
