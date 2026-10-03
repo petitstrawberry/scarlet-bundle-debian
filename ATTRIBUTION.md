@@ -5,6 +5,21 @@ documentation only. The Debian binaries and source packages in the release
 archives retain their individual licenses and copyright notices. The rootfs
 as a whole is not relicensed under MIT.
 
+## Shared Linux graphics overlay
+
+When graphics are enabled, the revision-pinned `scarlet-linux-graphics` producer
+adds locally compiled SGFX, the Linux SWS C binding, Mesa and SDL2 under their
+own licenses. The runtime retains its notices and provenance in
+`/usr/share/doc/scarlet-linux-graphics/`. Private SDL/Mesa files are installed
+under `/opt`; Debian-owned files and dpkg records are not overwritten.
+
+The accompanying source archive includes `upstream/linux-graphics/` with the
+exact Git source trees, the SDK lock, SGFX lock, complete vendored Rust
+dependencies and build recipes. Its source checksum list is shipped beside
+that directory. Graphics runtime dependency packages are Debian packages and
+are covered by the same exact-version `.dsc` collection and copyright inventory
+as the rest of the rootfs. Publish these sources together with the rootfs.
+
 Only Debian trixie `main`, `trixie-updates/main` and
 `trixie-security/main` are enabled. Every rootfs retains:
 
