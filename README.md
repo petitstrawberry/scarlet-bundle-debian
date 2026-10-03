@@ -49,7 +49,7 @@ The rootfs records selection/pin/package provenance in
 `/usr/share/scarlet/linux-games.json` and checks installed dpkg status.
 
 The rootfs contains shared dependencies, not game binaries or base sets.
-`bundles/openttd` separately installs the application, OpenGFX, native launcher
+`bundles/openttd` separately installs the application, OpenGFX, Linux launcher
 and desktop entry. Use the same pinned games producer revision for both sides.
 Its application overlay does not replace Debian-owned shared libraries.
 The rootfs source archive retains the dependency producer's exact Git tree and
