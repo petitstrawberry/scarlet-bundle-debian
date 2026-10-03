@@ -15,6 +15,7 @@ curl --version
 test -s /etc/ssl/certs/ca-certificates.crt
 test -s /usr/share/common-licenses/GPL-3
 test -s /usr/share/common-licenses/LGPL-2.1
+bash /usr/share/scarlet/smoke_mozc.sh
 dpkg-query -W -f='${db:Status-Status}\t${binary:Package}\t${Version}\t${Architecture}\t${source:Package}\t${source:Version}\n' | \
     awk -F '\t' '$1 == "installed" {print $2 "\t" $3 "\t" $4 "\t" $5 "\t" $6}' | \
     LC_ALL=C sort > /tmp/dpkg-packages.tsv

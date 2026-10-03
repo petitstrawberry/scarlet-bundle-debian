@@ -21,7 +21,10 @@ tar --zstd -tf "$archive" > "$listing"
 for path in ./usr/bin/bash ./usr/bin/apt-get ./usr/bin/dpkg \
     ./usr/lib/aarch64-linux-gnu/libc.so.6 ./var/lib/dpkg/status \
     ./usr/share/scarlet/dpkg-packages.tsv ./usr/share/scarlet/source-packages.tsv \
-    ./usr/share/scarlet/producer-LICENSE ./usr/share/scarlet/ATTRIBUTION.md; do
+    ./usr/share/scarlet/producer-LICENSE ./usr/share/scarlet/ATTRIBUTION.md \
+    ./usr/lib/mozc/mozc_server ./usr/lib/mozc/mozc_server.debian \
+    ./usr/share/scarlet/smoke_mozc.sh \
+    ./usr/share/doc/scarlet-mozc-server/mozc-allow-root-server.patch; do
     grep -Fxq "$path" "$listing"
 done
 # Import the archive itself, so the smoke test includes export/packaging effects.

@@ -5,7 +5,8 @@ Debian GNU/Linux userspace producer for
 layout and archive-layer format as `scarlet-bundle-alpine`.
 Both profiles use an AArch64 glibc rootfs based on Debian 13 (trixie):
 
-- `base`: bash, coreutils, apt/dpkg, CA certificates, curl and GCC/C++ runtimes;
+- `base`: bash, coreutils, apt/dpkg, CA certificates, curl, GCC/C++ runtimes,
+  and a preinstalled Mozc server with its OSS conversion dictionary;
 - `wine`: the base plus Box64 v0.4.4, Debian's amd64 Wine64 and dependencies.
   This initial profile supports 64-bit Windows programs; Wine32, Box86 and
   a WoW64 build are not included.
@@ -181,7 +182,31 @@ abi-run linux-aarch64 /usr/bin/apt-get --version
 
 Linux-container smoke success does not establish Scarlet compatibility.
 In particular, apt installation/maintainer scripts and systemd boot are not
-validated on Scarlet. Neither profile includes a Mozc or browser overlay.
+validated on Scarlet. Mozc is included in both rootfs profiles; no browser
+overlay is included.
+
+### Preinstalled Japanese conversion
+
+Both `base` and `wine` install Debian's `mozc-server` and `mozc-data`. The server
+at `/usr/lib/mozc/mozc_server` is rebuilt from the installed package's exact
+Debian source version with one Scarlet patch: the Linux conversion server may
+start as UID/EUID 0, which Scarlet's Linux ABI currently reports. The client and
+renderer privilege checks remain unchanged. Dependencies use Debian's glibc
+libraries; no Buildroot/musl runtime or separate dictionary overlay is needed.
+The OSS conversion dictionary is compiled into the server; `mozc-data` is
+primarily the icon assets.
+
+The original binary is retained as `/usr/lib/mozc/mozc_server.debian` through
+`dpkg-divert`, protecting the patched executable during package upgrades.
+Rebuild the bundle to update the patched server. Build provenance and the patch
+are under `/usr/share/doc/scarlet-mozc-server/`, and the matching patched input
+sources accompany the release as described in [ATTRIBUTION.md](ATTRIBUTION.md).
+
+The producer tests root startup and `nihonn` → `日本` conversion over Mozc IPC.
+The exported-rootfs smoke check also verifies the installed server starts as
+root and exposes its IPC socket. Scarlet's desktop already supplies the native
+`mozc-server` launcher and `scarlet-mozc` SWS service; their integration with this
+glibc server still needs a Scarlet runtime test.
 
 ### Box64 and Wine bring-up
 

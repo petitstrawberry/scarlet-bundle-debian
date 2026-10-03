@@ -53,9 +53,33 @@ version or package copyright notice cannot be obtained.
 
 The source archive also contains copies of the package copyright notices,
 common license texts, and this repository's producer scripts/configuration.
-Debian package binaries are unmodified; rootfs-specific changes concern the
-resolver link, hostname/hosts, directories, package metadata, and smoke script.
+Debian package binaries are unmodified except for the separately rebuilt Mozc
+conversion server described below; rootfs-specific changes also concern the
+resolver link, hostname/hosts, directories, package metadata, and smoke scripts.
 Shared libraries remain ordinary replaceable files in the rootfs.
+
+## Preinstalled Mozc
+
+Both profiles install Debian's `mozc-server` and `mozc-data` packages. The
+conversion server is rebuilt from the exact Debian source version of the
+installed package, with `mozc-allow-root-server.patch` allowing only the Linux
+server to start with UID/EUID 0. The renderer and client checks remain intact.
+The OSS conversion dictionary is compiled into the server; `mozc-data` supplies
+the distribution's icon assets. Mozc and the dictionary retain their upstream
+and Debian per-file terms, as recorded in `/usr/share/doc/mozc-server/copyright`
+and `/usr/share/doc/scarlet-mozc-server/copyright`.
+
+The original distribution server is preserved as `mozc_server.debian` using a
+local dpkg diversion. The rootfs includes the patch, build script, source
+checksums, build package inventory and provenance under
+`/usr/share/doc/scarlet-mozc-server/`. The accompanying source archive contains
+the exact patched input tree in
+`upstream/scarlet-mozc-server/build-source.tar.xz`, alongside that provenance
+and the normal Debian source packages. A new bundle build refreshes the patched
+server from the selected Debian package version.
+
+The repository's MIT notice does not relicense Mozc, its dictionary or Debian
+packages. Modifications to those sources retain the applicable upstream terms.
 
 ## Box64/Wine profile
 

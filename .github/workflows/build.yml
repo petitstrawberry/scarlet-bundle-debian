@@ -45,7 +45,7 @@ jobs:
           for script in producer/wrappers/*; do
             sh -n "$script"
           done
-          python3 -m py_compile producer/tools/*.py
+          python3 -m py_compile producer/tools/*.py producer/tests/mozc_conversion.py
           python3 -m json.tool producer/graphics.lock.json >/dev/null
           python3 -m json.tool producer/games.lock.json >/dev/null
 

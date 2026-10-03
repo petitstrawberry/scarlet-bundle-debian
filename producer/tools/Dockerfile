@@ -3,12 +3,31 @@ ARG GRAPHICS=enabled
 ARG GAME_DEPENDENCIES=disabled
 
 # The digest pins the official multi-architecture Debian base image.
-FROM debian:trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a AS base-packages
+FROM debian:trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a AS debian-packages
 COPY producer/tools/debian.sources /etc/apt/sources.list.d/debian.sources
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        bash ca-certificates coreutils curl file libgcc-s1 libstdc++6 zstd
+        bash ca-certificates coreutils curl file libgcc-s1 libstdc++6 zstd \
+        mozc-server mozc-data
+
+FROM debian-packages AS mozc-build
+RUN DEBIAN_FRONTEND=noninteractive apt-get build-dep -y --no-install-recommends \
+        "mozc=$(dpkg-query -W -f='${source:Version}' mozc-server)" && \
+    apt-get install -y --no-install-recommends build-essential
+COPY producer/tools/build_mozc_server.sh /tmp/build_mozc_server.sh
+COPY producer/patches/mozc-allow-root-server.patch /tmp/mozc-allow-root-server.patch
+COPY producer/tests/mozc_conversion.py /tmp/mozc_conversion.py
+RUN bash /tmp/build_mozc_server.sh
+
+FROM debian-packages AS base-packages
+# Keep the distribution binary under dpkg ownership while installing the
+# Scarlet-patched server at the path used by the native mozc-server launcher.
+RUN dpkg-divert --local --rename --add \
+        --divert /usr/lib/mozc/mozc_server.debian /usr/lib/mozc/mozc_server
+COPY --from=mozc-build /out/runtime/ /
+COPY producer/tests/smoke_mozc.sh /usr/share/scarlet/smoke_mozc.sh
+RUN bash /usr/share/scarlet/smoke_mozc.sh
 
 FROM base-packages AS box64-build
 RUN apt-get install -y --no-install-recommends build-essential cmake python3
@@ -106,6 +125,7 @@ COPY ATTRIBUTION.md /usr/share/scarlet/ATTRIBUTION.md
 COPY producer/tests/smoke_rootfs.sh /usr/share/scarlet/smoke_rootfs.sh
 
 FROM packages AS sources
+COPY --from=mozc-build /out/sources/ /sources/upstream/scarlet-mozc-server/
 COPY producer/tools/collect_sources.sh /tmp/collect_sources.sh
 RUN bash /tmp/collect_sources.sh
 RUN if [ -d /usr/share/doc/box64 ]; then \
