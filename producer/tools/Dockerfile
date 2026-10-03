@@ -1,5 +1,6 @@
 ARG PROFILE=base
 ARG GRAPHICS=enabled
+ARG GAME_DEPENDENCIES=disabled
 
 # The digest pins the official multi-architecture Debian base image.
 FROM debian:trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a AS base-packages
@@ -77,7 +78,24 @@ COPY --from=graphics-build /out/sources/ /linux-graphics/
 COPY --from=graphics-build /out/source-files.sha256 /linux-graphics-source-files.sha256
 FROM ${GRAPHICS}-sources AS graphics-sources
 
-FROM packages-${GRAPHICS} AS packages
+FROM packages-${GRAPHICS} AS graphics-packages
+FROM graphics-packages AS games-disabled
+FROM graphics-packages AS games-enabled
+COPY --from=games /runtime-packages.txt /tmp/game-runtime-packages.txt
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    $(cat /tmp/game-runtime-packages.txt) && rm /tmp/game-runtime-packages.txt
+COPY --from=games /selection.json /usr/share/scarlet/linux-games.json
+COPY --from=games /runtime-packages.txt /usr/share/scarlet/linux-games-runtime-packages.txt
+COPY producer/tests/smoke_game_dependencies.sh /usr/share/scarlet/smoke_game_dependencies.sh
+RUN sh /usr/share/scarlet/smoke_game_dependencies.sh
+
+FROM scratch AS games-sources-disabled
+FROM scratch AS games-sources-enabled
+COPY --from=games /source/ /linux-games-dependencies/producer/
+COPY --from=games /selection.json /runtime-packages.txt /linux-games-dependencies/
+FROM games-sources-${GAME_DEPENDENCIES} AS games-sources
+
+FROM games-${GAME_DEPENDENCIES} AS packages
 RUN mkdir -p /usr/share/scarlet && \
     dpkg-query -W -f='${db:Status-Status}\t${binary:Package}\t${Version}\t${Architecture}\t${source:Package}\t${source:Version}\n' | \
         awk -F '\t' '$1 == "installed" {print $2 "\t" $3 "\t" $4 "\t" $5 "\t" $6}' | \
@@ -94,6 +112,7 @@ RUN if [ -d /usr/share/doc/box64 ]; then \
         mkdir -p /sources/upstream && cp -a /usr/share/doc/box64 /sources/upstream/; \
     fi
 COPY --from=graphics-sources / /sources/upstream/
+COPY --from=games-sources / /sources/upstream/
 COPY producer /sources/producer
 COPY .github /sources/.github
 COPY .dockerignore /sources/.dockerignore
@@ -104,7 +123,8 @@ ARG VERSION
 ARG REVISION
 ARG PROFILE
 ARG GRAPHICS
-RUN printf 'Debian trixie (%s)\nVersion: %s\nProducer revision: %s\nGraphics: %s\n' "$PROFILE" "$VERSION" "$REVISION" "$GRAPHICS" > /usr/share/scarlet/build.txt && \
+ARG GAMES=none
+RUN printf 'Debian trixie (%s)\nVersion: %s\nProducer revision: %s\nGraphics: %s\nGames: %s\n' "$PROFILE" "$VERSION" "$REVISION" "$GRAPHICS" "$GAMES" > /usr/share/scarlet/build.txt && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /var/log/* && \
     mkdir -p /dev /proc /sys /tmp /root /home /shared /scarlet && \
     chmod 1777 /tmp && chmod 700 /root

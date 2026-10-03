@@ -22,6 +22,10 @@ on:
         description: Include the revision-pinned Scarlet Linux graphics producer
         type: boolean
         default: true
+      games:
+        description: Selected game dependency manifests (none or comma-separated names)
+        required: true
+        default: none
 
 permissions:
   contents: read
@@ -40,6 +44,7 @@ jobs:
           done
           python3 -m py_compile producer/tools/*.py
           python3 -m json.tool producer/graphics.lock.json >/dev/null
+          python3 -m json.tool producer/games.lock.json >/dev/null
 
   build:
     if: github.event_name == 'workflow_dispatch'
@@ -56,6 +61,7 @@ jobs:
           PROFILE: ${{ inputs.profile }}
           VERSION: ${{ inputs.version }}
           GRAPHICS: ${{ inputs.graphics && 'enabled' || 'disabled' }}
+          GAMES: ${{ inputs.games }}
         run: bash producer/tools/build_rootfs.sh
       - uses: actions/upload-artifact@v4
         with:

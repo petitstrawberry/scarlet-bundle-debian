@@ -13,7 +13,7 @@ command -v docker >/dev/null
 listing="$(mktemp)"
 image=''
 cleanup() {
-    rm -f "$listing"
+    rm -f "$listing" "$listing.games"
     if [[ -n "$image" ]]; then docker image rm "$image" >/dev/null; fi
 }
 trap cleanup EXIT
@@ -31,6 +31,19 @@ docker run --rm --network none --platform linux/arm64 "$image" \
 if grep -Fxq ./usr/share/scarlet/smoke_wine.sh "$listing"; then
     docker run --rm --network none --platform linux/arm64 "$image" \
         /bin/bash /usr/share/scarlet/smoke_wine.sh
+fi
+if grep -Fxq ./usr/share/scarlet/smoke_game_dependencies.sh "$listing"; then
+    docker run --rm --network none --platform linux/arm64 "$image" \
+        /bin/sh /usr/share/scarlet/smoke_game_dependencies.sh
+    source_archive="$archive_dir/${archive_name/rootfs-/sources-}"
+    tar --zstd -tf "$source_archive" > "$listing.games"
+    for path in ./upstream/linux-games-dependencies/selection.json \
+        ./upstream/linux-games-dependencies/runtime-packages.txt \
+        ./upstream/linux-games-dependencies/producer/producer/games.json \
+        ./upstream/linux-games-dependencies/producer/producer/resolve_dependencies.py; do
+        grep -Fxq "$path" "$listing.games"
+    done
+    rm "$listing.games"
 fi
 if grep -Fxq ./usr/share/scarlet/smoke_graphics.sh "$listing"; then
     docker run --rm --network none --platform linux/arm64 "$image" \
