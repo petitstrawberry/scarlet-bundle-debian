@@ -44,15 +44,21 @@ dependency closure, not Scarlet GPU execution.
 With a matching native bridge already running on the Scarlet desktop:
 
 ```sh
-XDG_RUNTIME_DIR=/tmp WAYLAND_DISPLAY=wayland-graphics \
-  abi-run linux-aarch64 /usr/local/bin/scarlet-gl /path/to/linux-application
+export XDG_RUNTIME_DIR=/tmp
+export WAYLAND_DISPLAY=wayland-graphics
+abi-run linux-aarch64 /bin/sh /usr/local/bin/scarlet-gl /path/to/linux-application
 ```
 
 The launcher selects private `/opt/sgfx-zink` and `/opt/sgfx-sdl` libraries for
 that process. Debian-owned SDL/Mesa files and desktop services are not replaced.
-The AArch64 QEMU/VirGL OpenTTD validation predates these Debian-built binaries;
-new Scarlet gameplay/physical hardware validation is still required. OpenTTD's
-fullscreen viewport issue remains unresolved.
+The integrated Debian base runtime was checked on 2026-10-03 in the dedicated
+Scarlet AArch64 QEMU/VirGL snapshot. The fresh-context error gate, pixel readback
+and Wayland swap passed; OpenTTD displayed a map and accepted pan/zoom and close
+input with a Zink/SGFX renderer. The 117 transferred runtime files matched the
+rootfs archive. Required Debian GLVND/Wayland EGL libraries were copied into the
+guest's private validation directory. This does not establish boot of the full
+new rootfs, physical hardware support or complete Vulkan conformance. OpenTTD's
+fullscreen viewport issue remains unresolved; use windowed mode.
 
 ## CI builds
 
