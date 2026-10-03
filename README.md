@@ -10,6 +10,50 @@ Both profiles use an AArch64 glibc rootfs based on Debian 13 (trixie):
   This initial profile supports 64-bit Windows programs; Wine32, Box86 and
   a WoW64 build are not included.
 
+Both profiles include the shared Linux graphics overlay by default. Its
+independent producer lives in `petitstrawberry/scarlet-linux-graphics`; the exact
+commit is pinned in `producer/graphics.lock.json`. The Debian producer fetches
+that clean checkout as a BuildKit additional context, installs its build/runtime
+dependencies from the same signed Debian repositories, builds SGFX's Vulkan ICD,
+Linux SWS binding, Mesa Zink and corrected SDL2, and copies the runtime into the
+rootfs. Native SWS and Wayland bridge remain in Scarlet's desktop bundle.
+OpenTTD and its base set remain separate application assets.
+
+Set `GRAPHICS=disabled` (or disable the manual workflow's `graphics` input) for
+the original console-only rootfs. Graphics builds require Docker with BuildKit
+additional-context support, Git and Python 3. For a local producer checkout,
+`GRAPHICS_SOURCE=/path/to/scarlet-linux-graphics` is accepted only when it is clean
+and matches the locked commit; it cannot silently substitute different sources.
+No graphics repo checkout is needed when graphics are disabled.
+
+For a non-publishing build, use a fresh artifact version and output directory:
+
+```sh
+ARCH=aarch64 PROFILE=base VERSION=v0.3.0 bash producer/tools/build_rootfs.sh
+```
+
+The source archive includes `upstream/linux-graphics/`: exact fork trees, both
+Rust lockfiles, vendored Rust dependencies, licenses, producer recipes and build
+provenance. The source-file checksum list is adjacent to that directory.
+Runtime provenance is `/usr/share/doc/scarlet-linux-graphics/manifest.json`.
+The normal package inventory/source collection includes graphics dependencies.
+Archive validation runs `smoke_graphics.sh` from the exported rootfs and checks
+the corresponding-source entries. These Linux checks validate loading and
+dependency closure, not Scarlet GPU execution.
+
+With a matching native bridge already running on the Scarlet desktop:
+
+```sh
+XDG_RUNTIME_DIR=/tmp WAYLAND_DISPLAY=wayland-graphics \
+  abi-run linux-aarch64 /usr/local/bin/scarlet-gl /path/to/linux-application
+```
+
+The launcher selects private `/opt/sgfx-zink` and `/opt/sgfx-sdl` libraries for
+that process. Debian-owned SDL/Mesa files and desktop services are not replaced.
+The AArch64 QEMU/VirGL OpenTTD validation predates these Debian-built binaries;
+new Scarlet gameplay/physical hardware validation is still required. OpenTTD's
+fullscreen viewport issue remains unresolved.
+
 ## CI builds
 
 Pushes validate the scripts. Run the **Build Debian rootfs** workflow manually

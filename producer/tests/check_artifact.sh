@@ -32,4 +32,19 @@ if grep -Fxq ./usr/share/scarlet/smoke_wine.sh "$listing"; then
     docker run --rm --network none --platform linux/arm64 "$image" \
         /bin/bash /usr/share/scarlet/smoke_wine.sh
 fi
+if grep -Fxq ./usr/share/scarlet/smoke_graphics.sh "$listing"; then
+    docker run --rm --network none --platform linux/arm64 "$image" \
+        /bin/sh /usr/share/scarlet/smoke_graphics.sh
+    source_archive="$archive_dir/${archive_name/rootfs-/sources-}"
+    test -s "$source_archive"
+    tar --zstd -tf "$source_archive" > "$listing"
+    for path in ./upstream/linux-graphics/manifest.json \
+        ./upstream/linux-graphics/producer/producer/sources.lock.json \
+        ./upstream/linux-graphics/upstream/mesa/docs/license.rst \
+        ./upstream/linux-graphics/upstream/sdl/LICENSE.txt \
+        ./upstream/linux-graphics/cargo-vendor-sgfx-config.toml \
+        ./upstream/linux-graphics/cargo-vendor-sws-config.toml; do
+        grep -Fxq "$path" "$listing"
+    done
+fi
 echo "Artifact OK: $archive_name"

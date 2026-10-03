@@ -4,11 +4,13 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ARCH="${ARCH:-aarch64}"
 PROFILE="${PROFILE:-base}"
+GRAPHICS="${GRAPHICS:-enabled}"
 VERSION="${VERSION:-v0.1.0}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-${REPO_ROOT}/producer/artifacts}"
 CACHE_DIR="${CACHE_DIR:-${REPO_ROOT}/producer/cache}"
 case "$ARCH" in aarch64) docker_platform=linux/arm64 ;; *) echo "Unsupported ARCH=$ARCH" >&2; exit 2 ;; esac
 case "$PROFILE" in base|wine) ;; *) echo "Unsupported PROFILE=$PROFILE; choose base or wine" >&2; exit 2 ;; esac
+case "$GRAPHICS" in enabled|disabled) ;; *) echo 'GRAPHICS must be enabled or disabled' >&2; exit 2 ;; esac
 if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo 'VERSION must look like v0.1.0' >&2; exit 2
 fi
@@ -29,10 +31,20 @@ cleanup() {
 }
 trap cleanup EXIT
 revision="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+graphics_arguments=(--build-arg "GRAPHICS=$GRAPHICS")
+if [[ "$GRAPHICS" == enabled ]]; then
+    graphics_source="$(python3 "$REPO_ROOT/producer/tools/prepare_graphics.py" "$CACHE_DIR")"
+    graphics_revision="$(git -C "$graphics_source" rev-parse HEAD)"
+    graphics_input_key="$(shasum -a 256 "$graphics_source/producer/sources.lock.json" | cut -d ' ' -f 1)"
+    graphics_arguments+=(--build-context "graphics=$graphics_source" \
+        --build-arg "GRAPHICS_REVISION=$graphics_revision" --build-arg "GRAPHICS_CACHE_ID=$graphics_input_key" \
+        --build-arg "BUILD_JOBS=${BUILD_JOBS:-4}")
+fi
 
 # Fail early on Wine startup before collecting and compressing sources. The
 # exported archive is checked separately, including ownership/symlink effects.
 docker build --platform "$docker_platform" --target rootfs --build-arg PROFILE="$PROFILE" \
+    "${graphics_arguments[@]}" \
     --build-arg VERSION="$VERSION" --build-arg REVISION="$revision" \
     --iidfile "$stage/rootfs.id" -f "$REPO_ROOT/producer/tools/Dockerfile" "$REPO_ROOT"
 rootfs_image="$(cat "$stage/rootfs.id")"
@@ -40,9 +52,14 @@ if [[ "$PROFILE" == wine ]]; then
     docker run --rm --network none --platform "$docker_platform" "$rootfs_image" \
         /bin/bash /usr/share/scarlet/smoke_wine.sh
 fi
+if [[ "$GRAPHICS" == enabled ]]; then
+    docker run --rm --network none --platform "$docker_platform" "$rootfs_image" \
+        /bin/sh /usr/share/scarlet/smoke_graphics.sh
+fi
 # Both targets reuse the same binary-installation layer and APT indexes.
 # Sources are mandatory, including for non-release CI builds.
 docker build --platform "$docker_platform" --target sources --build-arg PROFILE="$PROFILE" \
+    "${graphics_arguments[@]}" \
     --iidfile "$stage/sources.id" -f "$REPO_ROOT/producer/tools/Dockerfile" "$REPO_ROOT"
 source_image="$(cat "$stage/sources.id")"
 
