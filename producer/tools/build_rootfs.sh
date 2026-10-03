@@ -5,6 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ARCH="${ARCH:-aarch64}"
 PROFILE="${PROFILE:-base}"
 GRAPHICS="${GRAPHICS:-enabled}"
+GAMES="${GAMES:-none}"
 VERSION="${VERSION:-v0.1.0}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-${REPO_ROOT}/producer/artifacts}"
 CACHE_DIR="${CACHE_DIR:-${REPO_ROOT}/producer/cache}"
@@ -41,10 +42,19 @@ if [[ "$GRAPHICS" == enabled ]]; then
         --build-arg "BUILD_JOBS=${BUILD_JOBS:-4}")
 fi
 
+# The context contains package lists/provenance only, never game runtime files.
+game_arguments=(--build-arg "GAMES=$GAMES" --build-arg GAME_DEPENDENCIES=disabled)
+if [[ "$GAMES" != none ]]; then
+    game_context="$(python3 "$REPO_ROOT/producer/tools/prepare_games.py" "$CACHE_DIR" "$stage/games-context" \
+        --games "$GAMES" --graphics "$GRAPHICS")"
+    game_arguments=(--build-arg "GAMES=$GAMES" --build-arg GAME_DEPENDENCIES=enabled --build-context "games=$game_context")
+fi
+
 # Fail early on Wine startup before collecting and compressing sources. The
 # exported archive is checked separately, including ownership/symlink effects.
 docker build --platform "$docker_platform" --target rootfs --build-arg PROFILE="$PROFILE" \
     "${graphics_arguments[@]}" \
+    "${game_arguments[@]}" \
     --build-arg VERSION="$VERSION" --build-arg REVISION="$revision" \
     --iidfile "$stage/rootfs.id" -f "$REPO_ROOT/producer/tools/Dockerfile" "$REPO_ROOT"
 rootfs_image="$(cat "$stage/rootfs.id")"
@@ -56,10 +66,16 @@ if [[ "$GRAPHICS" == enabled ]]; then
     docker run --rm --network none --platform "$docker_platform" "$rootfs_image" \
         /bin/sh /usr/share/scarlet/smoke_graphics.sh
 fi
+# Verify dpkg ownership/status before collecting matching Debian source packages.
+if [[ "$GAMES" != none ]]; then
+    docker run --rm --network none --platform "$docker_platform" "$rootfs_image" \
+        /bin/sh /usr/share/scarlet/smoke_game_dependencies.sh
+fi
 # Both targets reuse the same binary-installation layer and APT indexes.
 # Sources are mandatory, including for non-release CI builds.
 docker build --platform "$docker_platform" --target sources --build-arg PROFILE="$PROFILE" \
     "${graphics_arguments[@]}" \
+    "${game_arguments[@]}" \
     --iidfile "$stage/sources.id" -f "$REPO_ROOT/producer/tools/Dockerfile" "$REPO_ROOT"
 source_image="$(cat "$stage/sources.id")"
 

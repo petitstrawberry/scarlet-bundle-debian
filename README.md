@@ -26,6 +26,37 @@ additional-context support, Git and Python 3. For a local producer checkout,
 and matches the locked commit; it cannot silently substitute different sources.
 No graphics repo checkout is needed when graphics are disabled.
 
+## Optional Linux game dependencies
+
+Game applications are separate source-build bundles in
+`petitstrawberry/scarlet-bundle-linux-games`, starting with `bundles/openttd`.
+Set `GAMES=openttd` when building the Debian rootfs used with that bundle;
+`GAMES=none` is the default and does not fetch a games checkout. Later catalog
+entries can be selected with comma-separated names. Unknown names are rejected.
+OpenTTD requires `GRAPHICS=enabled` for the common Zink/SGFX/SDL runtime.
+
+```sh
+ARCH=aarch64 PROFILE=base GRAPHICS=enabled GAMES=openttd VERSION=v0.3.0 \
+  bash producer/tools/build_rootfs.sh
+```
+
+`producer/games.lock.json` fixes the dependency producer revision. A local
+`GAMES_SOURCE` override must be clean and match that exact commit. The producer
+resolves the selected games' `runtime-packages.txt` union and installs it with
+APT before collecting the package inventory and exact Debian source packages.
+This includes OpenTTD's `libpng16-16t64`; no manual library copying is required.
+The rootfs records selection/pin/package provenance in
+`/usr/share/scarlet/linux-games.json` and checks installed dpkg status.
+
+The rootfs contains shared dependencies, not game binaries or base sets.
+`bundles/openttd` separately installs the application, OpenGFX, Linux launcher
+and desktop entry. Use the same pinned games producer revision for both sides.
+Its application overlay does not replace Debian-owned shared libraries.
+The rootfs source archive retains the dependency producer's exact Git tree and
+selection/package manifests under `upstream/linux-games-dependencies/`.
+Application and OpenGFX corresponding sources accompany the game bundle output.
+The manual workflow accepts the same `games` selection.
+
 For a non-publishing build, use a fresh artifact version and output directory:
 
 ```sh

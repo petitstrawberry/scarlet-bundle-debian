@@ -5,7 +5,17 @@ documentation only. The Debian binaries and source packages in the release
 archives retain their individual licenses and copyright notices. The rootfs
 as a whole is not relicensed under MIT.
 
-## Shared Linux graphics overlay
+## Optional game dependency manifests
+
+Selected games' shared-library packages are installed with APT and retain
+Debian ownership, licenses and matching corresponding-source collection.
+`producer/games.lock.json` pins the external dependency catalog; its complete
+producer Git tree and selection/package manifests are included under
+`upstream/linux-games-dependencies/`. The Debian rootfs contains no game
+application binary or OpenGFX asset. Those are distributed with the separate
+games bundle and its corresponding sources, under their upstream licenses.
+
+## Shared Linux graphics runtime
 
 When graphics are enabled, the revision-pinned `scarlet-linux-graphics` producer
 adds locally compiled SGFX, the Linux SWS C binding, Mesa and SDL2 under their
