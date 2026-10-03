@@ -93,7 +93,14 @@ fullscreen viewport issue remains unresolved; use windowed mode.
 
 ## CI builds
 
-Pushes validate the scripts. Run the **Build Debian rootfs** workflow manually
+Pushes and pull requests validate the scripts. Producer/workflow changes on
+`main` also build and check the graphics-enabled `base` rootfs with
+`GAMES=openttd`, using version `v0.3.<workflow run number>`. After validation,
+Actions publishes binaries and corresponding sources together, then updates
+the archive download URL and SHA in `bundles/rootfs/bundle.toml`. Bundle-pin
+and documentation-only changes do not trigger another run.
+
+Run the **Build Debian rootfs** workflow manually
 with a new version to build on GitHub's native `ubuntu-24.04-arm` runner:
 
 ```sh
@@ -109,6 +116,13 @@ or `bundles/rootfs-wine/bundle.toml` (`wine`) via an automated commit.
 The version must be new across both profiles; existing releases are never replaced.
 Set `publish=false` for a build-only run and download the
 `debian-<profile>-aarch64` workflow artifact. No local build is needed.
+
+Updating Scarlet's Debian repository revision alone does not add a newly built
+runtime: the selected `bundles/rootfs/bundle.toml` must point at a release
+containing it. The old v0.1.0/v0.2.0 archives do not contain `scarlet-gl`.
+After Actions updates that manifest, select its commit in Scarlet's
+`bundles/full-debian/bundle.toml` and rebuild the image. Repository URLs remain
+unchanged; only the archive URL/SHA and the consuming repository commit change.
 
 For a separate Linux/Docker build environment, the equivalent producer entry
 point is `ARCH=aarch64 PROFILE=base VERSION=v0.1.0 bash producer/tools/build_rootfs.sh`.

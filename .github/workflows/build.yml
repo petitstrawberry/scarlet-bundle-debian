@@ -2,18 +2,21 @@ name: Build Debian rootfs
 
 on:
   push:
+    paths-ignore:
+      - 'bundles/**'
+      - '**/*.md'
   pull_request:
   workflow_dispatch:
     inputs:
       version:
         description: Artifact version
         required: true
-        default: v0.2.0
+        default: v0.3.0
       profile:
         description: Rootfs profile
         type: choice
         options: [base, wine]
-        default: wine
+        default: base
       publish:
         description: Publish a release and update the pinned bundle after validation
         type: boolean
@@ -47,7 +50,7 @@ jobs:
           python3 -m json.tool producer/games.lock.json >/dev/null
 
   build:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: validate
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 90
@@ -58,25 +61,25 @@ jobs:
       - name: Build rootfs and corresponding sources
         env:
           ARCH: aarch64
-          PROFILE: ${{ inputs.profile }}
-          VERSION: ${{ inputs.version }}
-          GRAPHICS: ${{ inputs.graphics && 'enabled' || 'disabled' }}
-          GAMES: ${{ inputs.games }}
+          PROFILE: ${{ inputs.profile || 'base' }}
+          VERSION: ${{ inputs.version || format('v0.3.{0}', github.run_number) }}
+          GRAPHICS: ${{ (github.event_name != 'workflow_dispatch' || inputs.graphics) && 'enabled' || 'disabled' }}
+          GAMES: ${{ inputs.games || 'openttd' }}
         run: bash producer/tools/build_rootfs.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: debian-${{ inputs.profile }}-aarch64
+          name: debian-${{ inputs.profile || 'base' }}-aarch64
           path: producer/artifacts/
           if-no-files-found: error
           compression-level: 0
       - name: Check archive, licenses and Linux execution
         env:
-          VERSION: ${{ inputs.version }}
-          PROFILE: ${{ inputs.profile }}
+          VERSION: ${{ inputs.version || format('v0.3.{0}', github.run_number) }}
+          PROFILE: ${{ inputs.profile || 'base' }}
         run: bash producer/tests/check_artifact.sh "producer/artifacts/rootfs-aarch64-${PROFILE}-${VERSION}.tar.zst"
 
   release:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish))
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -89,12 +92,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: debian-${{ inputs.profile }}-aarch64
+          name: debian-${{ inputs.profile || 'base' }}-aarch64
           path: producer/artifacts
       - name: Publish binary and source archives together, and pin the bundle
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ inputs.version || format('v0.3.{0}', github.run_number) }}
           BUILD_REVISION: ${{ github.sha }}
-          PROFILE: ${{ inputs.profile }}
+          PROFILE: ${{ inputs.profile || 'base' }}
         run: bash producer/tools/publish_release.sh
